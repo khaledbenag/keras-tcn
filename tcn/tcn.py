@@ -84,7 +84,7 @@ class ResidualBlock(Layer):
             self.layers = []
             self.res_output_shape = input_shape
 
-            for k in range(2):
+            for k in range(4):
                 name = 'conv1D_{}'.format(k)
                 with K.name_scope(name):  # name scope used to make sure weights get unique names
                     self._add_and_activate_layer(Conv1D(filters=self.nb_filters,
