@@ -157,9 +157,9 @@ class ResidualBlock(Layer):
             x = layer(x, training=training) if training_flag else layer(x)
             self.layers_outputs.append(x)
         x2 = self.shape_match_conv(inputs)
-        x3 = SqueezeExcite(x)
+        x2 = SqueezeExcite(x)
         self.layers_outputs.append(x2)
-        res_x = layers.add([x2, x, x3])
+        res_x = layers.add([x2, x])
         self.layers_outputs.append(res_x)
 
         res_act_x = self.final_activation(res_x)
