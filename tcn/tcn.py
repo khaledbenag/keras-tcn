@@ -5,7 +5,18 @@ from tensorflow.keras import backend as K, Model, Input, optimizers
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Activation, SpatialDropout1D, Lambda
 from tensorflow.keras.layers import Layer, Conv1D, Dense, BatchNormalization, LayerNormalization
+from tensorflow.keras.layers import GlobalAveragePooling2D, Multiply
 
+
+def SqueezeExcite(x, ratio=16, name=''):
+    nb_chan = K.int_shape(x)[-1]
+
+    y = GlobalAveragePooling2D(name='{}_se_avg'.format(name))(x)
+    y = Dense(nb_chan // ratio, activation='relu', name='{}_se_dense1'.format(name))(y)
+    y = Dense(nb_chan, activation='sigmoid', name='{}_se_dense2'.format(name))(y)
+
+    y = Multiply(name='{}_se_mul'.format(name))([x, y])
+    return y
 
 def is_power_of_two(num: int):
     return num != 0 and ((num & (num - 1)) == 0)
@@ -84,7 +95,7 @@ class ResidualBlock(Layer):
             self.layers = []
             self.res_output_shape = input_shape
 
-            for k in range(4):
+            for k in range(2):
                 name = 'conv1D_{}'.format(k)
                 with K.name_scope(name):  # name scope used to make sure weights get unique names
                     self._add_and_activate_layer(Conv1D(filters=self.nb_filters,
@@ -93,6 +104,7 @@ class ResidualBlock(Layer):
                                                         padding=self.padding,
                                                         name=name,
                                                         kernel_initializer=self.kernel_initializer))
+                    
 
                 with K.name_scope('norm_{}'.format(k)):
                     if self.use_batch_norm:
@@ -145,8 +157,9 @@ class ResidualBlock(Layer):
             x = layer(x, training=training) if training_flag else layer(x)
             self.layers_outputs.append(x)
         x2 = self.shape_match_conv(inputs)
+        x3 = SqueezeExcite(x)
         self.layers_outputs.append(x2)
-        res_x = layers.add([x2, x])
+        res_x = layers.add([x2, x, x3])
         self.layers_outputs.append(res_x)
 
         res_act_x = self.final_activation(res_x)
